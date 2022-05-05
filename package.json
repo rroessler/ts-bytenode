@@ -20,7 +20,6 @@
     "homepage": "https://github.com/rroessler/ts-bytenode#readme",
     "devDependencies": {
         "@types/node": "^17.0.31",
-        "micro-benchmark": "^1.3.22",
         "rimraf": "^3.0.2",
         "typescript": "^4.6.4"
     }
