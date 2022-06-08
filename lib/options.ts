@@ -1,6 +1,9 @@
-/** TypeScript Configuration Options. */
-export interface IConfigOptions {
-    compilerOptions?: IConfigCompilerOptions;
+/**************
+ *  TYPEDEFS  *
+ **************/
+
+/** TSC Project Options. */
+export interface ITSC {
     include?: string[];
     exclude?: string[];
     files?: string[];
@@ -8,15 +11,15 @@ export interface IConfigOptions {
     references?: { path: string }[];
 }
 
-/** Compilation Options */
-export interface IConfigCompilerOptions {
+/** TSC Compiler Options. */
+export interface ICompilerOptions {
     allowJs?: boolean;
     allowSyntheticDefaultImports?: boolean;
     allowUmdGlobalAccess?: boolean;
     allowUnreachableCode?: boolean;
     allowUnusedLabels?: boolean;
     alwaysStrict?: boolean;
-    // assumeChangesOnlyAffectDirectDependencies?: boolean;
+    assumeChangesOnlyAffectDirectDependencies?: boolean;
     baseUrl?: string;
     charset?: string;
     checkJs?: boolean;
@@ -35,9 +38,9 @@ export interface IConfigCompilerOptions {
     esModuleInterop?: boolean;
     experimentalDecorators?: boolean;
     extendedDiagnostics?: boolean;
-    // fallbackPolling?: 'dynamicPriorityPolling' | 'fixedPollingInterval' | 'priorityPollingInterval'
+    fallbackPolling?: 'dynamicPriorityPolling' | 'fixedPollingInterval' | 'priorityPollingInterval';
     forceConsistentCasingInFileNames?: boolean;
-    // generateCpuProfile?: string
+    generateCpuProfile?: string;
     importHelpers?: boolean;
     importsNotUsedAsValues?: 'error' | 'preserve' | 'remove';
     incremental?: boolean;
@@ -97,7 +100,7 @@ export interface IConfigCompilerOptions {
     >;
     listEmittedFiles?: boolean;
     listFiles?: boolean;
-    // listFilesOnly?: boolean
+    listFilesOnly?: boolean;
     mapRoot?: string;
     maxNodeModuleJsDepth?: number;
     module?: 'none' | 'CommonJS' | 'AMD' | 'system' | 'UMD' | 'ES6' | 'ES2015' | 'ES2020' | 'ESNext';

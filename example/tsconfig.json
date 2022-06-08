@@ -10,10 +10,9 @@
         "noImplicitOverride": true,
         "sourceMap": false,
 
-        "rootDir": "lib",
+        "rootDir": ".",
         "outDir": "dist"
     },
 
-    "include": ["lib"],
-    "exclude": ["dist", "examples", "node_modules"]
+    "exclude": ["dist"]
 }

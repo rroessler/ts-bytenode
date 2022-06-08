@@ -1,56 +1,56 @@
 /// Native Modules
-import * as vm from 'vm';
-import * as path from 'path';
+import vm from 'vm';
+import path from 'path';
+import Module from 'module';
 
-/// ts-bytenode Imports
-const pkg = require(path.join(__dirname, '../package.json'));
-import { Compile } from './compile';
-
-/** Runner Functionality. */
-export namespace Runner {
+/** Bytecode Generation Library. */
+export namespace Bytecode {
     /****************
      *  PROPERTIES  *
      ****************/
 
-    /** V8.8 / V8.9 Node Versions. */
-    const V8 = ['v8.8', 'v8.9'];
+    /// Node Bytecode Versioning.
+    namespace V {
+        /** V8.8 / V8.9 Node Versions. */
+        export const OLD = ['v8.8', 'v8.9'];
 
-    /** LTS Versions. */
-    const LTS = ['v12', 'v13', 'v14', 'v15', 'v16', 'v17', 'v18'];
+        /** LTS Versions. */
+        export const LTS = ['v12', 'v13', 'v14', 'v15', 'v16', 'v17', 'v18'];
+    }
 
     /********************
      *  PUBLIC METHODS  *
      ********************/
 
     /**
-     * Launches an assumed set of V8 bytecode.
-     * @param bytecode                      Buffered bytecode.
+     * Converts JS code input to the V8 bytecode equivalent before being able to run.
+     * @param code                              Code to compile.
+     * @param isModule                          Module flag.
      */
-    export const launch = <T extends any = any>(bytecode: Buffer) => scriptify(bytecode).runInThisContext() as T;
+    export const compile = (code: string, isModule = false): Buffer =>
+        new vm.Script(isModule ? Module.wrap(code) : code, { produceCachedData: true }).createCachedData();
 
     /**
-     * Converts given bytecode into a suitable runner script.
-     * @param bytecode                      Bytecode to convert to a script.
+     * Launches a given V8 bytecode buffer safely.
+     * @param buffer                            Bytecode to launch.
      */
-    export const scriptify = (bytecode: Buffer): vm.Script => {
-        // fix up the current bytecode
-        const result = Utils.fix(bytecode);
-
-        // generate the V8 script
+    export const launch = <T = any>(buffer: Buffer): T => {
+        const result = Utils.fix(buffer); // fix up the buffer for execution
         const script = new vm.Script(result.dummy, { cachedData: result.buffer });
-
-        // ensure we have a valid script
-        Utils.assertScript(script);
-
-        // and return the resulting script
-        return script;
+        Utils.assert(script); // ensure valid script output
+        return script.runInThisContext();
     };
 
     /***************
      *  UTILITIES  *
      ***************/
+
     /** Utility Methods. */
     export namespace Utils {
+        /********************
+         *  PUBLIC METHODS  *
+         ********************/
+
         /**
          * Core fixer method to ensure bytecode is valid on current system.
          * @param buffer                        Bytecode buffer to fix.
@@ -70,9 +70,9 @@ export namespace Runner {
          * Asserts a "vm.Script" for valid cache data.
          * @param script                        Script to assert.
          */
-        export const assertScript = (script: vm.Script) => {
+        export const assert = (script: vm.Script) => {
             if (!script.cachedDataRejected) return;
-            throw new Error('ts-bytenode | Invalid or incompatible cached data!');
+            throw new Error('Invalid or incompatible cached data');
         };
 
         /*********************
@@ -85,13 +85,13 @@ export namespace Runner {
          */
         const m_fix = (buffer: Buffer) => {
             // prepare some dummy bytecode
-            const dummy = Compile.raw(`"ts-bytenode : v${pkg.version}"`) as Buffer;
+            const dummy = compile('"ಠ_ಠ"') as Buffer;
 
             // modify the required version as necessary
-            if (V8.some((v) => process.version.startsWith(v))) {
+            if (V.OLD.some((v) => process.version.startsWith(v))) {
                 dummy.slice(16, 20).copy(buffer, 16);
                 dummy.slice(20, 24).copy(buffer, 20);
-            } else if (LTS.some((v) => process.version.startsWith(v))) {
+            } else if (V.LTS.some((v) => process.version.startsWith(v))) {
                 dummy.slice(12, 16).copy(buffer, 12);
             } else {
                 dummy.slice(12, 16).copy(buffer, 12);
@@ -104,7 +104,7 @@ export namespace Runner {
          * @param buffer                        Buffered bytecode.
          */
         const m_length = (buffer: Buffer) => {
-            const [s, e] = V8.some((v) => process.version.startsWith(v)) ? [12, 16] : [8, 12];
+            const [s, e] = V.OLD.some((v) => process.version.startsWith(v)) ? [12, 16] : [8, 12];
             return buffer.slice(s, e).reduce((a, n, p) => (a += n * Math.pow(256, p)), 0);
         };
     }
