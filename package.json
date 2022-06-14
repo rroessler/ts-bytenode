@@ -1,9 +1,13 @@
 {
     "name": "ts-bytenode",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Bytenode Compiler for Typescript.",
     "main": "dist/index.js",
     "types": "typings",
+    "files": [
+        "dist/**/*",
+        "typings/**/*"
+    ],
     "scripts": {
         "prepublishOnly": "npm run build",
         "tsb": "node ./dist/CLI.js",
