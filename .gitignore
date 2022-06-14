@@ -109,3 +109,4 @@ __*
 # TS-Bytenode Items
 *.tsb
 *.js
+!tools/CLI.js
