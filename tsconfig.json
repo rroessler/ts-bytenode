@@ -11,7 +11,9 @@
         "sourceMap": false,
 
         "rootDir": "lib",
-        "outDir": "dist"
+        "outDir": "dist",
+        "declaration": true,
+        "declarationDir": "typings"
     },
 
     "include": ["lib"],

@@ -4,6 +4,7 @@
 
 /** TSC Project Options. */
 export interface ITSC {
+    compilerOptions?: ICompilerOptions;
     include?: string[];
     exclude?: string[];
     files?: string[];

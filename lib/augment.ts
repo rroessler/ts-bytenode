@@ -21,8 +21,19 @@ interface IAugmentor {
  *  PUBLIC METHODS  *
  ********************/
 
+/// Gets the current execution mode.
+export const mode = function (): 'prod' | 'dev' {
+    const err = new Error();
+    Error.prepareStackTrace = (_, stack) => stack;
+    const stack = err.stack as unknown as NodeJS.CallSite[];
+    Error.prepareStackTrace = undefined;
+
+    const fp = stack[1].getFileName() ?? '';
+    return (process.env.TSB_LIST?.split(';') ?? []).some((ext) => fp.endsWith(ext)) ? 'prod' : 'dev';
+};
+
 /**
- * Modifies the current context to allow loading in `.tsb` bytenode files.
+ * Modifies the current context to allow loading in `.tsb` bytecode files.
  * @param opts                              Augmentation options.
  */
 export const augment = (opts: IAugmentor = {}) => {
@@ -36,6 +47,10 @@ export const augment = (opts: IAugmentor = {}) => {
     if (MOD._extensions[conf.ext]) {
         throw ReferenceError(`Extension "${conf.ext}" has already been applied to NodeJS.require`);
     }
+
+    // add the available extension to the TSB list
+    if (process.env.TSB_LIST === undefined) process.env.TSB_LIST = `${conf.ext}`;
+    else process.env.TSB_LIST += `;${conf.ext}`;
 
     // augment the current extensions
     MOD._extensions[conf.ext] = function (module: Module, fp: string) {

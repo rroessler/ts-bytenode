@@ -1,6 +1,7 @@
 /// Native Modules
 import fs from 'fs';
 import path from 'path';
+import { fork } from 'child_process';
 
 /// Node Modules
 import * as ts from 'typescript';
@@ -18,6 +19,12 @@ export namespace TSC {
     /** Compilation Output Cache. */
     export type Cache = Map<string, Buffer>;
 
+    /** Extra Compilation Options. */
+    export interface IOptions {
+        codegen?: boolean; // Whether to produce bytecode or regular output.
+        outDir?: string; // Additional directory path to ADD onto $outDir.
+    }
+
     /********************
      *  PUBLIC METHODS  *
      ********************/
@@ -25,14 +32,15 @@ export namespace TSC {
     /**
      * Compiles a given TypeScript project configuration source.
      * @param source                        TS-Config Source File.
+     * @param options                       Additional compilation options.
      */
-    export const project = (source?: string | ITSC): Cache => {
+    export const project = (source?: string | ITSC, options: IOptions = {}): Cache => {
         // generate the underlying TS program
-        const program = m_createProgram(source);
+        const program = m_createProgram(source, options);
 
         // prepare the cached result
         const cache: Cache = new Map();
-        const result = program.emit(undefined, m_interceptor(cache));
+        const result = program.emit(undefined, m_interceptor(cache, options.codegen ?? true));
 
         // always generate the loggable diagnostics
         const diagnostics = ts.getPreEmitDiagnostics(program).concat(result.diagnostics);
@@ -44,6 +52,40 @@ export namespace TSC {
         return diagnostics.length ? new Map() : cache;
     };
 
+    /**
+     * Compiles a given TypeScript project configuration source within an Electron-based context.
+     * @param source                        TS-Config Source File.
+     */
+    export const electronify = async (source?: string, ...args: string[]): Promise<void> =>
+        new Promise<void>((resolve, reject) => {
+            const tsb_path = path.join(__dirname, 'CLI.js');
+            const e_path = path.join(path.dirname(require.resolve('electron')), 'cli.js');
+            if (!fs.existsSync(e_path)) throw new Error('Electron.js is not installed');
+
+            // generate the subprocess in which to coordinate compilation
+            const p = fork(e_path, [tsb_path, 'compile', source ?? '', ...args], {
+                env: { ELECTRON_RUN_AS_NODE: '1' },
+                stdio: ['inherit', 'pipe', 'pipe', 'ipc']
+            });
+
+            if (p.stdout) {
+                p.stdout.on('data', console.log.bind(null, 'STDOUT Data:'));
+                p.stdout.on('error', console.log.bind(null, 'STDOUT Error:'));
+                p.stdout.on('end', () => resolve());
+            }
+
+            if (p.stderr) {
+                p.stderr.on('data', console.error.bind(null, 'STDERR Data:'));
+                p.stderr.on('error', console.error.bind(null, 'STDERR Error:'));
+            }
+
+            p.addListener('message', console.log);
+            p.addListener('error', console.error);
+
+            p.on('error', reject);
+            p.on('exit', resolve);
+        });
+
     /*********************
      *  PRIVATE METHODS  *
      *********************/
@@ -51,8 +93,9 @@ export namespace TSC {
     /**
      * Creates a TS program compiler toolchain.
      * @param source                                Source to convert to a TS program.
+     * @param params                                Additional compilation parameters.
      */
-    const m_createProgram = (source?: string | ITSC): ts.Program => {
+    const m_createProgram = (source?: string | ITSC, params: IOptions = {}): ts.Program => {
         // determine the base program path
         const basePath = typeof source === 'string' ? path.dirname(source) : process.cwd();
         let config = source as ITSC; // pre-cast as configuration values
@@ -72,6 +115,11 @@ export namespace TSC {
 
         // resolve the `tsconfig` object into suitable program data
         const { options, fileNames, projectReferences } = ts.parseJsonConfigFileContent(config, ts.sys, basePath);
+
+        // modify the output directory as necessary
+        options.outDir = path.join(options.outDir ?? basePath, params.outDir ?? '');
+
+        // and creating the program toolchain as needed
         return ts.createProgram({ options, projectReferences, rootNames: fileNames });
     };
 
@@ -100,11 +148,12 @@ export namespace TSC {
      * @param cache                                     Cache to write to.
      */
     const m_interceptor =
-        (cache: Cache): ts.WriteFileCallback =>
+        (cache: Cache, codegen: boolean): ts.WriteFileCallback =>
         (fp, data, _, onError) => {
             try {
                 if (fp.endsWith(ts.Extension.Js)) {
-                    cache.set(fp.replace(ts.Extension.Js, ''), Bytecode.compile(data, true));
+                    const buffer = codegen ? Bytecode.compile(data, true) : Buffer.from(data);
+                    cache.set(fp.replace(ts.Extension.Js, ''), buffer);
                 } else ts.sys.writeFile(fp, data, _);
             } catch (err: any) {
                 onError?.(err.message);

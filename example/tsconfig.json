@@ -9,10 +9,8 @@
         "noImplicitAny": true,
         "noImplicitOverride": true,
         "sourceMap": false,
+        "allowJs": true,
 
-        "rootDir": ".",
-        "outDir": "dist"
-    },
-
-    "exclude": ["dist"]
+        "rootDir": "."
+    }
 }
