@@ -48,6 +48,7 @@ $ tsb compile ./example                 Compiles the "tsconfig.json" found in th
 $ tsb compile ./example/tsconfig.json
 $ tsb compile -m dev                    Output ".js" files instead of ".tsb".
 $ tsb compile -m dev -d dev             Output resulting development files into "$outDir/dev". Modifies the "tsconfig.js" output directory.
+$ tsb compile -i hello.ts __*           Ignore files by basename pattern matching.
 
 $ tsb run ./example                     Launches the compiled "tsb" file "./example/dist/index.tsb" (if no "index.js" file exist).
 $ tsb run ./example/index.tsb
