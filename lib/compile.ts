@@ -4,6 +4,7 @@ import path from 'path';
 import { fork } from 'child_process';
 
 /// Node Modules
+import micromatch from 'micromatch';
 import * as ts from 'typescript';
 
 // TS-Bytenode Modules
@@ -19,10 +20,15 @@ export namespace TSC {
     /** Compilation Output Cache. */
     export type Cache = Map<string, Buffer>;
 
+    /** Compilation Additional Pipeline Modifiers. */
+    export type Pipeline = Array<(input: string) => string>;
+
     /** Extra Compilation Options. */
     export interface IOptions {
         codegen?: boolean; // Whether to produce bytecode or regular output.
         outDir?: string; // Additional directory path to ADD onto $outDir.
+        noCompile?: string | string[]; // Globstar patterns for files to not compile.
+        pipeline?: Pipeline; // Available pipeline options.
     }
 
     /********************
@@ -40,7 +46,16 @@ export namespace TSC {
 
         // prepare the cached result
         const cache: Cache = new Map();
-        const result = program.emit(undefined, m_interceptor(cache, options.codegen ?? true));
+        const total = program.getSourceFiles().length;
+
+        // ensure there are actually any inputs
+        if (total === 0) console.warn('tsb > Warning: Did not find any source files.');
+
+        // destructure some additional output options
+        const { outDir, ...intercepts } = options;
+
+        // coordinate the actually compilation routine
+        const result = program.emit(undefined, m_interceptor(cache, intercepts));
 
         // always generate the loggable diagnostics
         const diagnostics = ts.getPreEmitDiagnostics(program).concat(result.diagnostics);
@@ -49,7 +64,7 @@ export namespace TSC {
         m_log(diagnostics);
 
         // depending on the diagnostics found, return the result
-        return diagnostics.length ? new Map() : cache;
+        return diagnostics.length || !total ? new Map() : cache;
     };
 
     /**
@@ -65,18 +80,18 @@ export namespace TSC {
             // generate the subprocess in which to coordinate compilation
             const p = fork(e_path, [tsb_path, 'compile', source ?? '', ...args], {
                 env: { ELECTRON_RUN_AS_NODE: '1' },
-                stdio: ['inherit', 'pipe', 'pipe', 'ipc']
+                stdio: ['inherit', 'pipe', 'pipe', 'ipc'],
             });
 
             if (p.stdout) {
-                p.stdout.on('data', console.log.bind(null, 'STDOUT Data:'));
-                p.stdout.on('error', console.log.bind(null, 'STDOUT Error:'));
+                p.stdout.on('data', console.log);
+                p.stdout.on('error', console.log);
                 p.stdout.on('end', () => resolve());
             }
 
             if (p.stderr) {
-                p.stderr.on('data', console.error.bind(null, 'STDERR Data:'));
-                p.stderr.on('error', console.error.bind(null, 'STDERR Error:'));
+                p.stderr.on('data', console.error);
+                p.stderr.on('error', console.error);
             }
 
             p.addListener('message', console.log);
@@ -136,7 +151,7 @@ export namespace TSC {
         const host: ts.FormatDiagnosticsHost = {
             getCanonicalFileName: (fp) => fp,
             getCurrentDirectory: ts.sys.getCurrentDirectory,
-            getNewLine: () => ts.sys.newLine
+            getNewLine: () => ts.sys.newLine,
         };
 
         // and warn the user of any found diagnostics
@@ -147,16 +162,34 @@ export namespace TSC {
      * Constructs a write-file callback interceptor to cache output compilation results.
      * @param cache                                     Cache to write to.
      */
-    const m_interceptor =
-        (cache: Cache, codegen: boolean): ts.WriteFileCallback =>
-        (fp, data, _, onError) => {
+    const m_interceptor = (cache: Cache, options: Omit<IOptions, 'outDir'>): ts.WriteFileCallback => {
+        // destructure the given interceptor options
+        const { noCompile, codegen, pipeline } = options;
+
+        // setup a compilation matcher
+        const allow = noCompile
+            ? (fp: string) =>
+                  (codegen ?? true) && fp.endsWith(ts.Extension.Js) && !micromatch.isMatch(path.basename(fp), noCompile)
+            : (fp: string) => (codegen ?? true) && fp.endsWith(ts.Extension.Js);
+
+        // setup a pipe-line if given
+        const transform = (data: string) => (pipeline ?? []).reduce((a, cb) => cb(a), data);
+
+        // and return the constructed interceptor
+        return (fp, data, _, onError) => {
             try {
-                if (fp.endsWith(ts.Extension.Js)) {
-                    const buffer = codegen ? Bytecode.compile(data, true) : Buffer.from(data);
-                    cache.set(fp.replace(ts.Extension.Js, ''), buffer);
-                } else ts.sys.writeFile(fp, data, _);
+                // ensure the data is transformed
+                data = transform(data);
+
+                // if not compiling further, then just write (as is non-JS file)
+                if (!allow(fp)) return ts.sys.writeFile(fp, data, _);
+
+                // otherwise coordinate a compilation
+                const buffer = codegen ?? true ? Bytecode.compile(data, true) : Buffer.from(data);
+                cache.set(fp.replace(ts.Extension.Js, ''), buffer);
             } catch (err: any) {
                 onError?.(err.message);
             }
         };
+    };
 }

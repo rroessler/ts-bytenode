@@ -21,6 +21,7 @@ interface IOptions {
     electron: boolean;
     mode: 'prod' | 'dev';
     outDir: string;
+    ignore: string[];
 }
 
 /*****************
@@ -50,7 +51,8 @@ program
     .option('-m, --mode <"prod"|"dev">', 'The output build type.', 'prod')
     .option('-d, --outDir <path>', 'Optional directory to append to the current "tsconfig.json" outDir.', '')
     .option('-e, --electron', 'Compile against an Electron process.', false)
-    .action(async (fileName: string, { config, electron, mode, outDir }: IOptions) => {
+    .option('-i, --ignore <patterns...>', 'Ignore files by given glob patterns.', [])
+    .action(async (fileName: string, { config, electron, mode, outDir, ignore }: IOptions) => {
         // ensure the given mode is correct
         if (!['prod', 'dev'].includes(mode))
             return program.error(`error: option '-m, --mode <"prod"|"dev">' received invalid value '${mode}'`);
@@ -60,12 +62,13 @@ program
 
         // coordinate the compilation as required with a valid `tsconfig.json` file
         const confPath = fs.statSync(filePath).isDirectory() ? path.join(filePath, 'tsconfig.json') : filePath;
+        const options = { codegen: mode === 'prod', outDir, noCompile: ignore };
 
         // if we have an electron instance
         if (electron && mode === 'prod') return TSC.electronify(confPath);
 
         // prepare the cache as currently necessary
-        const cache = TSC.project(confPath, { codegen: mode === 'prod', outDir });
+        const cache = TSC.project(confPath, options);
         const ext = mode === 'prod' ? '.tsb' : '.js';
 
         // write every-file required from within the cache
