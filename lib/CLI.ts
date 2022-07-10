@@ -65,7 +65,12 @@ program
         const options = { codegen: mode === 'prod', outDir, noCompile: ignore };
 
         // if we have an electron instance
-        if (electron && mode === 'prod') return TSC.electronify(confPath);
+        if (electron && mode === 'prod') {
+            const args = ['-m', mode ?? 'prod'];
+            if (outDir) args.push('-d', outDir);
+            if (ignore) args.push('-i', ...ignore);
+            return TSC.electronify(confPath, ...args);
+        }
 
         // prepare the cache as currently necessary
         const cache = TSC.project(confPath, options);
