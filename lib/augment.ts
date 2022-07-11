@@ -29,7 +29,7 @@ export const mode = function (): 'prod' | 'dev' {
     Error.prepareStackTrace = undefined;
 
     const fp = stack[1].getFileName() ?? '';
-    return (process.env.TSB_LIST?.split(';') ?? []).some((ext) => fp.endsWith(ext)) ? 'prod' : 'dev';
+    return fp === 'evalmachine.<anonymous>' ? 'prod' : 'dev';
 };
 
 /**
@@ -48,10 +48,6 @@ export const augment = (opts: IAugmentor = {}) => {
         throw ReferenceError(`Extension "${conf.ext}" has already been applied to NodeJS.require`);
     }
 
-    // add the available extension to the TSB list
-    if (process.env.TSB_LIST === undefined) process.env.TSB_LIST = `${conf.ext}`;
-    else process.env.TSB_LIST += `;${conf.ext}`;
-
     // augment the current extensions
     MOD._extensions[conf.ext] = function (module: Module, fp: string) {
         fp = conf.resolver(fp); // pre-resolve the given file-name
@@ -67,7 +63,7 @@ export const augment = (opts: IAugmentor = {}) => {
             filename: fp,
             lineOffset: 0,
             displayErrors: true,
-            cachedData: result.buffer
+            cachedData: result.buffer,
         });
 
         // ensure the script is valid again
@@ -101,7 +97,7 @@ export const augment = (opts: IAugmentor = {}) => {
             filename: fp,
             lineOffset: 0,
             columnOffset: 0,
-            displayErrors: true
+            displayErrors: true,
         });
 
         // and finally run as expected
