@@ -52,7 +52,7 @@ export namespace TSC {
         if (total === 0) console.warn('tsb > Warning: Did not find any source files.');
 
         // destructure some additional output options
-        const { outDir, ...intercepts } = options;
+        const { outDir: _, ...intercepts } = options;
 
         // coordinate the actually compilation routine
         const result = program.emit(undefined, m_interceptor(cache, intercepts));
@@ -66,8 +66,11 @@ export namespace TSC {
         // log all the available diagnostics
         m_log(diagnostics);
 
+        // if there are errors, then throw a failure
+        if (errors) throw new Error('tsb > Error: Failed to compile project');
+
         // depending on the diagnostics found, return the result
-        return errors || !total ? new Map() : cache;
+        return total ? cache : new Map();
     };
 
     /**
@@ -87,11 +90,15 @@ export namespace TSC {
             });
 
             if (p.stdout) {
-                p.stdout.on('data', (chunk) => process.stdout.write(chunk.toString()));
                 p.stdout.on('end', () => resolve());
+                p.stdout.on('data', (chunk) => process.stdout.write(chunk.toString()));
+                p.stdout.on('error', (chunk) => process.stdout.write(chunk.toString()));
             }
 
-            if (p.stderr) p.stderr.on('error', (chunk) => process.stderr.write(chunk.toString()));
+            if (p.stderr) {
+                p.stderr.on('data', (chunk) => process.stderr.write(chunk.toString()));
+                p.stderr.on('error', (chunk) => process.stderr.write(chunk.toString()));
+            }
 
             p.addListener('message', (chunk) => process.stdout.write(chunk.toString()));
             p.addListener('error', (chunk) => process.stderr.write(chunk.toString()));
