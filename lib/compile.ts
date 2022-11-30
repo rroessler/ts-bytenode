@@ -60,11 +60,14 @@ export namespace TSC {
         // always generate the loggable diagnostics
         const diagnostics = ts.getPreEmitDiagnostics(program).concat(result.diagnostics);
 
+        // check the total number of errors
+        const errors = diagnostics.reduce((acc, { category }) => acc + +(category === ts.DiagnosticCategory.Error), 0);
+
         // log all the available diagnostics
         m_log(diagnostics);
 
         // depending on the diagnostics found, return the result
-        return diagnostics.length || !total ? new Map() : cache;
+        return errors || !total ? new Map() : cache;
     };
 
     /**
@@ -80,22 +83,18 @@ export namespace TSC {
             // generate the subprocess in which to coordinate compilation
             const p = fork(e_path, [tsb_path, 'compile', source ?? '', ...args], {
                 env: { ELECTRON_RUN_AS_NODE: '1' },
-                stdio: ['inherit', 'pipe', 'pipe', 'ipc'],
+                stdio: ['inherit', 'pipe', 'pipe', 'ipc']
             });
 
             if (p.stdout) {
-                p.stdout.on('data', console.log);
-                p.stdout.on('error', console.log);
+                p.stdout.on('data', (chunk) => process.stdout.write(chunk.toString()));
                 p.stdout.on('end', () => resolve());
             }
 
-            if (p.stderr) {
-                p.stderr.on('data', console.error);
-                p.stderr.on('error', console.error);
-            }
+            if (p.stderr) p.stderr.on('error', (chunk) => process.stderr.write(chunk.toString()));
 
-            p.addListener('message', console.log);
-            p.addListener('error', console.error);
+            p.addListener('message', (chunk) => process.stdout.write(chunk.toString()));
+            p.addListener('error', (chunk) => process.stderr.write(chunk.toString()));
 
             p.on('error', reject);
             p.on('exit', resolve);
@@ -151,7 +150,7 @@ export namespace TSC {
         const host: ts.FormatDiagnosticsHost = {
             getCanonicalFileName: (fp) => fp,
             getCurrentDirectory: ts.sys.getCurrentDirectory,
-            getNewLine: () => ts.sys.newLine,
+            getNewLine: () => ts.sys.newLine
         };
 
         // and warn the user of any found diagnostics
