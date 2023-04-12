@@ -2,20 +2,23 @@
     "compilerOptions": {
         "target": "ES6",
         "module": "CommonJS",
-        "moduleResolution": "node",
         "esModuleInterop": true,
+        "moduleResolution": "node",
 
         "strict": true,
+        "strictNullChecks": true,
+        "resolveJsonModule": true,
+
         "noImplicitAny": true,
         "noImplicitOverride": true,
-        "sourceMap": false,
+        "noImplicitReturns": true,
 
         "rootDir": "lib",
         "outDir": "dist",
+        "sourceMap": false,
         "declaration": true,
         "declarationDir": "typings"
     },
 
-    "include": ["lib"],
-    "exclude": ["dist", "examples", "node_modules"]
+    "include": ["lib"]
 }

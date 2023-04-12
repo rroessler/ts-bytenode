@@ -11,6 +11,7 @@
         "sourceMap": false,
         "allowJs": true,
 
-        "rootDir": "."
+        "rootDir": ".",
+        "outDir": "dist"
     }
 }

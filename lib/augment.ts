@@ -4,25 +4,36 @@ import vm from 'vm';
 import path from 'path';
 import Module from 'module';
 
-/// TS-Bytenode Modules
-import { Bytecode } from './codify';
+/// TSB Modules
+import { Bytecode } from './bytecode';
+import assert from 'assert';
 
-/**************
- *  TYPEDEFS  *
- **************/
+//  TYPEDEFS  //
 
-/** Augmentation Options. */
-interface IAugmentor {
-    ext?: `.{string}`;
+/** Application Context Mode. */
+export type Mode = 'prod' | 'dev';
+
+/** Augmenting Interface. */
+export interface IAugmentation {
+    extension?: `.${string}`;
     resolver?: (filePath: string) => string;
 }
 
-/********************
- *  PUBLIC METHODS  *
- ********************/
+//  PROPERTIES  //
 
-/// Gets the current execution mode.
-export const mode = function (): 'prod' | 'dev' {
+// need constant private access to the "Module" import
+const MOD = Module as any;
+
+/** Defaulted augmentation options. */
+const m_options: Required<IAugmentation> = {
+    extension: '.tsb',
+    resolver: (fp) => fp,
+};
+
+//  PUBLIC METHODS  //
+
+/** Ascertains the current running of the file. */
+export const mode = function (): Mode {
     const err = new Error();
     Error.prepareStackTrace = (_, stack) => stack;
     const stack = err.stack as unknown as NodeJS.CallSite[];
@@ -33,74 +44,63 @@ export const mode = function (): 'prod' | 'dev' {
 };
 
 /**
- * Modifies the current context to allow loading in `.tsb` bytecode files.
- * @param opts                              Augmentation options.
+ * Coordinates augmenting the process for launching "bytenode" files.
+ * @param options                                       Augmentation options.
  */
-export const augment = (opts: IAugmentor = {}) => {
-    // define the base configuration required
-    const conf: Required<IAugmentor> = Object.assign({ ext: '.tsb', resolver: (fp: string) => fp }, opts);
+export const augment = (options: IAugmentation = {}) => {
+    // determine the base configuration to be used
+    const { extension, resolver } = Object.assign({}, m_options, options);
 
-    // need private access to the `Module` import so declare as any
-    const MOD = Module as any;
+    // ensure there is not already a value set
+    assert(!MOD._extensions[extension], `Extension "${extension}" has already been applied to "NodeJS.require"`);
 
-    // ensure the extension has not already been set
-    if (MOD._extensions[conf.ext]) {
-        throw ReferenceError(`Extension "${conf.ext}" has already been applied to NodeJS.require`);
-    }
+    // now we can actually augment the current extensions
+    MOD._extensions[extension] = m_require(resolver);
+};
 
-    // augment the current extensions
-    MOD._extensions[conf.ext] = function (module: Module, fp: string) {
-        fp = conf.resolver(fp); // pre-resolve the given file-name
+//  PRIVATE METHODS  //
 
-        // check the the file actually exists now
-        if (!fs.existsSync(fp)) throw ReferenceError('Augmentor input file does not exist.');
+/**
+ * Constructs a "require" augmentation.
+ * @param resolver                          File-path resolver.
+ */
+const m_require = (resolver: NonNullable<IAugmentation['resolver']>) =>
+    function (module: Module, filePath: string) {
+        // pre-resolve the given file-name as necessary
+        filePath = resolver(filePath);
 
-        // recompile to the necessary usage
-        const result = Bytecode.Utils.fix(fs.readFileSync(fp));
+        // check the file actually exists now
+        assert(fs.existsSync(filePath), `Cannot require non-existent file "${filePath}"`);
 
-        // generate the script differently for launching now
-        const script = new vm.Script(result.dummy, {
-            filename: fp,
-            lineOffset: 0,
-            displayErrors: true,
-            cachedData: result.buffer,
-        });
-
-        // ensure the script is valid again
-        Bytecode.Utils.assert(script);
+        // re-compile to be launchable as necessary
+        const bytecode = new Bytecode(fs.readFileSync(filePath), { filename: filePath, lineOffset: 0 });
 
         /***************************
          *  REQUIRE MODIFICATIONS  *
          ***************************/
 
-        /** Base Required Implemenation. */
+        // base require function/object
         function require(id: string) {
             return module.require(id);
         }
 
-        /** Base Resolve Implemenation. */
+        // ensure resolver is possible
         require.resolve = function (req: string, opts: any) {
             return MOD._resolveFilename(req, module, false, opts);
-        } as RequireResolve;
+        };
 
         // make the extension augmentation globally available
         if (process.mainModule) require.main = process.mainModule;
         require.extensions = MOD._extensions;
         require.cache = MOD._cache;
 
-        // finally allow use within the current context
-        const dir = path.dirname(fp);
-        const args = [module.exports, require, module, fp, dir, process, global];
+        // finally allow within the current context
+        const dirPath = path.dirname(filePath);
+        const args = [module.exports, require, module, filePath, dirPath, process, global];
 
-        // generate the script wrapper
-        const wrapper = script.runInThisContext({
-            filename: fp,
-            lineOffset: 0,
-            columnOffset: 0,
-            displayErrors: true,
-        });
+        // generate the module wrapper
+        const wrapper = bytecode.launch({ filename: filePath, lineOffset: 0, columnOffset: 0, displayErrors: true });
 
-        // and finally run as expected
+        // and apply the arguments with a desired "this" value
         return wrapper.apply(module.exports, args);
     };
-};
