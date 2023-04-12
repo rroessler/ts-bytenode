@@ -28,8 +28,6 @@ export namespace Electron {
         // determine the electron path to be used for ts-bytenode
         const script = path.join(__dirname, 'bin', 'electron.js');
 
-        console.log({ source, options });
-
         // generate a sub-process to be used
         const child = cp.fork(runtime(), [script, JSON.stringify({ source, options })], {
             env: m_options.env,

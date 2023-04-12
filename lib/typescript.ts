@@ -25,6 +25,7 @@ export interface IOptions<P extends string | Pipeline = Pipeline> {
     outDir?: string;
     rootPath?: string;
     codegen?: boolean;
+    extension?: `.${string}`;
     ignore?: string | string[];
 }
 
@@ -38,7 +39,7 @@ export class Interceptor {
     readonly cache: Cache = new Map();
 
     /** The underlying interceptor options. */
-    private m_options: Pick<IOptions, 'codegen' | 'ignore' | 'pipeline'>;
+    private m_options: Omit<IOptions, 'outDir' | 'rootPath'>;
 
     //  GETTERS x SETTERS  //
 
@@ -65,7 +66,7 @@ export class Interceptor {
      * Constructs a simple interceptor instance.
      * @param options                               Options to use.
      */
-    constructor(options: Pick<IOptions, 'codegen' | 'ignore' | 'pipeline'> = {}) {
+    constructor(options: Omit<IOptions, 'outDir' | 'rootPath'> = {}) {
         // pull out the required options to be used
         const { codegen, ignore, pipeline } = options;
 
@@ -87,14 +88,17 @@ export class Interceptor {
             // ensure the data has been properly transformed
             data = this.pipeline.reduce((a, cb) => cb(a), data);
 
-            // if not compiling further then just ignore the file
-            if (!this.m_allowed(filePath)) return;
+            // determine if currently compilable
+            const compilable = this.m_compilable(filePath);
 
-            // otherwise complete a full compilation instance
-            const buffer = this.m_options.codegen ?? true ? new Bytecode(data, {}).buffer : Buffer.from(data);
+            // depending on compilation state, generate bytecode or data-buffer
+            const buffer = compilable ? new Bytecode(data, {}, true).buffer : Buffer.from(data);
+
+            // fix up the output file-name if necessary
+            filePath = compilable ? filePath.replace(ts.Extension.Js, this.m_options.extension ?? '.tsb') : filePath;
 
             // and update the cache with this current instance
-            this.cache.set(filePath.replace(ts.Extension.Js, ''), buffer);
+            this.cache.set(filePath, buffer);
         } catch (err: any) {
             onError?.(err.message);
         }
@@ -106,12 +110,12 @@ export class Interceptor {
      * Checks if a file-path is valid for compilation.
      * @param filePath                              File to assert.
      */
-    private m_allowed(filePath: string) {
+    private m_compilable(filePath: string) {
         // pull out the ignore list for the interceptor
         const { ignore } = this.m_options;
 
         // determine if initially verified as valid
-        const valid = filePath.endsWith(ts.Extension.Js);
+        const valid = filePath.endsWith(ts.Extension.Js) && (this.m_options.codegen ?? true);
 
         // and then return the result
         return valid && (ignore ? !micromatch.isMatch(path.basename(filePath), ignore) : true);

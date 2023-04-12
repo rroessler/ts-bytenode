@@ -103,11 +103,17 @@ export namespace Bytecode.Utils {
      * @returns
      */
     export const compile = (code: string, isModule: boolean = false) => {
-        // generate the base code-script instance
-        const script = new vm.Script(isModule ? Module.wrap(code) : code, { produceCachedData: true });
+        // ensure the code is wrapped as a module if necessary
+        code = isModule ? Module.wrap(code) : code;
 
-        // and now fix up the buffer instance as necessary
-        return m_fix(script.createCachedData());
+        // generate the base code-script instance
+        const script = new vm.Script(code, { produceCachedData: true });
+
+        // generate the buffer to be used
+        const buffer = script.createCachedData();
+
+        // fix and return the resulting buffer value
+        return m_fix(buffer), buffer;
     };
 
     /**
@@ -142,8 +148,5 @@ export namespace Bytecode.Utils {
             dummy[m_slicer](12, 16).copy(buffer, 12);
             dummy[m_slicer](16, 20).copy(buffer, 16);
         }
-
-        // return the updated buffer instance
-        return buffer;
     };
 }
