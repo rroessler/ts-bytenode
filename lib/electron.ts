@@ -1,10 +1,10 @@
 /// Node Modules
 import fs from 'fs';
 import path from 'path';
-import assert from 'assert';
 import cp from 'child_process';
 
 /// TSB Modules
+import { Assert } from './assert';
 import * as TSC from './typescript';
 
 /** Electron Compilation Functionality. */
@@ -83,7 +83,7 @@ export namespace Electron {
         const filePath = path.join(path.dirname(require.resolve('electron')), 'cli.js');
 
         // validate to ensure it exists
-        assert(fs.existsSync(filePath), 'Electron.js is not installed');
+        Assert(fs.existsSync(filePath), 'Electron.js is not installed');
 
         // and can return as normal
         return filePath;

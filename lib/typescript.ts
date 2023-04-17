@@ -1,7 +1,6 @@
 /// Node Modules
 import fs from 'fs';
 import path from 'path';
-import assert from 'assert';
 
 /// Library Modules
 import * as ts from 'typescript';
@@ -9,6 +8,7 @@ import micromatch from 'micromatch';
 import { type TSConfigJSON } from 'types-tsconfig';
 
 /// TSB Modules
+import { Assert } from './assert';
 import { Bytecode } from './bytecode';
 
 //  TYPEDEFS  //
@@ -155,7 +155,7 @@ export const project = (source?: string | Program.IConfig, options: IOptions = {
     m_log(diagnostics);
 
     // throw an error if necessary
-    assert(!errors, 'TSB > Failed to compile project');
+    Assert.falsey(errors, 'TSB > Failed to compile project');
 
     // return the intercepted outputs
     return interceptor.cache;
@@ -229,7 +229,7 @@ export namespace Program.IConfig {
         const filePath = ts.findConfigFile(basePath, ts.sys.fileExists, fileName);
 
         // if a valid file exists, then read the file in question
-        assert(filePath, 'TSC > Could not resolve valid "tsconfig" file');
+        Assert(filePath, 'TSC > Could not resolve valid "tsconfig" file');
 
         // valid so we can return as necessary
         return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as IConfig;

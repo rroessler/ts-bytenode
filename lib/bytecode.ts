@@ -1,9 +1,9 @@
 /// Node Modules
 import vm from 'vm';
-import assert from 'assert';
 import Module from 'module';
 
 /// TSB Modules
+import { Assert } from './assert';
 const pkg = require('../package.json');
 
 /** Bytecode Wrapper Class. */
@@ -66,7 +66,7 @@ export class Bytecode<T = any> {
     /** Coordinates launching the bytecode. */
     launch(options: vm.RunningScriptOptions = {}): T {
         // ensure the script is valid (eg: cached data is not invalidated)
-        assert(this.valid, 'Bytecode > Invalid or incompatible script data');
+        Assert(this.valid, 'Bytecode > Invalid or incompatible script data');
 
         // return the script in the current context
         return this.m_script.runInThisContext(options);

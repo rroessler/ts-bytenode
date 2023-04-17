@@ -1,12 +1,11 @@
 /// Native Modules
 import fs from 'fs';
-import vm from 'vm';
 import path from 'path';
 import Module from 'module';
 
 /// TSB Modules
+import { Assert } from './assert';
 import { Bytecode } from './bytecode';
-import assert from 'assert';
 
 //  TYPEDEFS  //
 
@@ -27,7 +26,7 @@ const MOD = Module as any;
 /** Defaulted augmentation options. */
 const m_options: Required<IAugmentation> = {
     extension: '.tsb',
-    resolver: (fp) => fp,
+    resolver: (fp) => fp
 };
 
 //  PUBLIC METHODS  //
@@ -52,7 +51,7 @@ export const augment = (options: IAugmentation = {}) => {
     const { extension, resolver } = Object.assign({}, m_options, options);
 
     // ensure there is not already a value set
-    assert(!MOD._extensions[extension], `Extension "${extension}" has already been applied to "NodeJS.require"`);
+    Assert.falsey(MOD._extensions[extension], `Extension "${extension}" has already been applied to "NodeJS.require"`);
 
     // now we can actually augment the current extensions
     MOD._extensions[extension] = m_require(resolver);
@@ -70,7 +69,7 @@ const m_require = (resolver: NonNullable<IAugmentation['resolver']>) =>
         filePath = resolver(filePath);
 
         // check the file actually exists now
-        assert(fs.existsSync(filePath), `Cannot require non-existent file "${filePath}"`);
+        Assert(fs.existsSync(filePath), `Cannot require non-existent file "${filePath}"`);
 
         // re-compile to be launchable as necessary
         const bytecode = new Bytecode(fs.readFileSync(filePath), { filename: filePath, lineOffset: 0 });
