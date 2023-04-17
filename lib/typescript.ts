@@ -9,10 +9,7 @@ import micromatch from 'micromatch';
 import { type TSConfigJSON } from 'types-tsconfig';
 
 /// TSB Modules
-import { Bytecode } from '../bytecode';
-
-/// Typescript Exports
-export * from './import';
+import { Bytecode } from './bytecode';
 
 //  TYPEDEFS  //
 
