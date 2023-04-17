@@ -94,8 +94,7 @@ const m_require = (resolver: NonNullable<IAugmentation['resolver']>) =>
         require.cache = MOD._cache;
 
         // finally allow within the current context
-        const dirPath = path.dirname(filePath);
-        const args = [module.exports, require, module, filePath, dirPath, process, global];
+        const args = [module.exports, require, module, filePath, path.dirname(filePath), process, global];
 
         // generate the module wrapper
         const wrapper = bytecode.launch({ filename: filePath, lineOffset: 0, columnOffset: 0, displayErrors: true });
