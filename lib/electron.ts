@@ -14,7 +14,7 @@ export namespace Electron {
     /** Fork options required for forking. */
     const m_options: cp.ForkOptions = {
         env: { ELECTRON_RUN_AS_NODE: '1', FORCE_COLOR: '1' },
-        stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+        stdio: ['inherit', 'inherit', 'inherit', 'ipc']
     };
 
     //  PUBLIC METHODS  //
@@ -31,7 +31,7 @@ export namespace Electron {
         // generate a sub-process to be used
         const child = cp.fork(runtime(), [script, JSON.stringify({ source, options })], {
             env: m_options.env,
-            stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+            stdio: ['pipe', 'pipe', 'pipe', 'ipc']
         });
 
         // prepare the output data object
