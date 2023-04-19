@@ -89,7 +89,7 @@ export namespace Electron {
         const script = path.join(__dirname, '..', 'bin', 'CLI.js');
 
         // generate a sub-process to be used
-        const child = cp.fork(runtime(), [script, 'compile', source ?? ''].concat(args), m_options);
+        const child = cp.fork(runtime(), [script, 'compile'].concat(source ? ['-c', source] : [], args), m_options);
 
         // prepare the promise instance to be returned
         return new Promise<void>((resolve, reject) => {

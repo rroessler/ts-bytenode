@@ -65,9 +65,9 @@ export namespace CLI {
             // if we have an electron instance
             if (electron && mode === 'prod') {
                 const args = ['-m', mode ?? 'prod'];
-                if (pl) args.push('-p', pl);
                 if (outDir) args.push('-d', outDir);
                 if (ignore.length) args.push('-i', ...ignore);
+                if (typeof pl === 'string') args.push('-p', pl);
                 return TSB.Electron.fork(confPath, ...args);
             }
 
