@@ -1,2 +1,2 @@
 /// Pipeline Implementation.
-exports.default = (data) => data;
+exports.default = (data) => data + ';;;;;;;';

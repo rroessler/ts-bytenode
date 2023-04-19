@@ -176,7 +176,7 @@ const m_log = (diagnostics: ts.Diagnostic[], pretty = !!ts.sys.writeOutputIsTTY 
     const host: ts.FormatDiagnosticsHost = {
         getNewLine: () => ts.sys.newLine,
         getCanonicalFileName: (filePath) => filePath,
-        getCurrentDirectory: () => ts.sys.getCurrentDirectory()
+        getCurrentDirectory: () => ts.sys.getCurrentDirectory(),
     };
 
     // and alert the user based on the results

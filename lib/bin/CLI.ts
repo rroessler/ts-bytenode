@@ -22,6 +22,7 @@ export namespace CLI {
         outDir: string;
         ignore: string[];
         electron: boolean;
+        pipeline?: string;
         extension: `.${string}`;
     }
 
@@ -49,10 +50,11 @@ export namespace CLI {
         .option('-c, --config <fileName>', 'Specify a tsconfig.json file to compile from.', process.cwd())
         .option('-m, --mode <"prod"|"dev">', 'The output build type.', 'prod')
         .option('-d, --outDir <path>', 'Optional directory to append to the current "tsconfig.json" outDir.', '')
+        .option('-p, --pipeline <path>', 'Optional pipeline script to use.')
         .option('-e, --electron', 'Compile against an Electron process.', false)
         .option('-i, --ignore <patterns...>', 'Ignore generating bytecode for files by given glob patterns.', [])
         .option('-x, --ext <extension>', 'The file-extension to use for bytecode outputs.', '.tsb')
-        .action(async ({ config, electron, mode, outDir, ignore, extension }: IOptions) => {
+        .action(async ({ config, electron, mode, outDir, ignore, extension, pipeline: pl }: IOptions) => {
             // ensure the given mode is correct
             if (!['prod', 'dev'].includes(mode))
                 return program.error(`error: option '-m, --mode <"prod"|"dev">' received invalid value '${mode}'`);
@@ -63,13 +65,18 @@ export namespace CLI {
             // if we have an electron instance
             if (electron && mode === 'prod') {
                 const args = ['-m', mode ?? 'prod'];
+                if (pl) args.push('-p', pl);
                 if (outDir) args.push('-d', outDir);
                 if (ignore.length) args.push('-i', ...ignore);
                 return TSB.Electron.fork(confPath, ...args);
             }
 
+            // re-construct the pipeline to be used
+            const pipeline: TSC.IOptions['pipeline'] =
+                pl && fs.existsSync(pl) ? require(path.resolve(pl)).default : undefined;
+
             // prepare the cache as currently necessary
-            const cache = TSC.project(confPath, { codegen: mode === 'prod', outDir, ignore, extension });
+            const cache = TSC.project(confPath, { pipeline, codegen: mode === 'prod', outDir, ignore, extension });
 
             // write every-file required from within the cache
             cache.forEach((buffer, filePath) => {
