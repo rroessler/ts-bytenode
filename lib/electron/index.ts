@@ -76,7 +76,7 @@ export namespace Electron {
         const end = (data: Buffer) => new Map(transform(JSON.parse(data.toString())));
 
         // and prepare the handler as necessary
-        return m_promisify(child, end, exit);
+        return m_promisify<TSC.Cache>(child, end, exit);
     };
 
     /**
