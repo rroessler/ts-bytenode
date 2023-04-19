@@ -15,6 +15,6 @@ const pipeline = path.join(__dirname, 'pipeline.js');
 
 //  RUNNER  //
 
-TSB.Electron.compile(rootDir, { pipeline, codegen: false }).then((cache) =>
+TSB.Electron.compileProject(rootDir, { pipeline, codegen: false }).then((cache) =>
     cache.forEach((buffer) => console.log(buffer.toString()))
 );
