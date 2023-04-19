@@ -10,11 +10,10 @@ const { TSB } = require('..');
 
 //  PROPERTIES  //
 
-const rootDir = path.join(__dirname, '..', 'example/tsconfig.json');
 const pipeline = path.join(__dirname, 'pipeline.js');
+const tsconfig = path.join(__dirname, '..', 'example/tsconfig.json');
 
 //  RUNNER  //
 
-TSB.Electron.compileProject(rootDir, { pipeline, codegen: false }).then((cache) =>
-    cache.forEach((buffer) => console.log(buffer.toString()))
-);
+TSB.Electron.compileNativeFile({ filePath: __filename }).then(console.log);
+TSB.Electron.compileProject(tsconfig).then(console.log);

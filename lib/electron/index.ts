@@ -27,15 +27,10 @@ export namespace Electron {
     //  PROPERTIES  //
 
     /** Fork options required for forking. */
-    const m_fopts: cp.ForkOptions = {
+    const m_options: cp.ForkOptions = {
         env: { ELECTRON_RUN_AS_NODE: '1', FORCE_COLOR: '1' },
         stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
     };
-
-    /** Compilation options required for forking. */
-    const m_copts: cp.ForkOptions = Object.assign({}, m_fopts, {
-        stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
-    });
 
     //  PUBLIC METHODS  //
 
@@ -46,9 +41,10 @@ export namespace Electron {
     export const compileNativeFile = (script: Script) => {
         // determine the native-electron wrapper to use
         const runner = path.join(__dirname, 'native.js');
+        const fopts: cp.ForkOptions = { ...m_options, stdio: 'pipe' };
 
         // generate a sub-process to be used
-        const child = cp.fork(runtime(), [runner, JSON.stringify(script)], m_copts);
+        const child = cp.fork(runtime(), [runner, JSON.stringify(script)], fopts);
 
         // prepare the completion handlers
         const end = (data: Buffer) => data;
@@ -66,9 +62,10 @@ export namespace Electron {
     export const compileProject = (source?: string | TSC.Program.IConfig, options: TSC.IOptions<string> = {}) => {
         // determine the electron path to be used for ts-bytenode
         const runner = path.join(__dirname, 'project.js');
+        const fopts: cp.ForkOptions = { ...m_options, stdio: 'pipe' };
 
         // generate a sub-process to be used
-        const child = cp.fork(runtime(), [runner, JSON.stringify({ source, options })], m_copts);
+        const child = cp.fork(runtime(), [runner, JSON.stringify({ source, options })], fopts);
 
         // handle incoming data with an adequate handler
         const transform = (entries: Array<[string, ArrayBufferLike]>) =>
@@ -92,7 +89,7 @@ export namespace Electron {
         const script = path.join(__dirname, '..', 'bin', 'CLI.js');
 
         // generate a sub-process to be used
-        const child = cp.fork(runtime(), [script, 'compile', source ?? ''].concat(args), m_fopts);
+        const child = cp.fork(runtime(), [script, 'compile', source ?? ''].concat(args), m_options);
 
         // prepare the promise instance to be returned
         return new Promise<void>((resolve, reject) => {
